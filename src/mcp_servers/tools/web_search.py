@@ -239,9 +239,6 @@ class WebSearchTool:
             
             # Apply additional cleaning to ensure no artifacts remain
             snippet = self._clean_text(snippet)
-            
-            
-            
             snippet = snippet.strip()
             
             formatted += f"\n{idx}. {title}\n"
@@ -250,4 +247,7 @@ class WebSearchTool:
             
         
         return formatted
-    
+
+if __name__ == "__main__":
+
+    pass
