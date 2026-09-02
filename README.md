@@ -1097,28 +1097,29 @@ Database MCP Tools
 
 The MCP server now exposes two database tools:
 
-get_database_schema()
-execute_sql()
+    get_database_schema()
 
-get_database_schema()
+    execute_sql()
+
+    get_database_schema()
 
 Retrieves the schema of one or more MySQL tables, including:
 
-Table name
+        Table name
 
-Column names
+        Column names
 
-Data types
+        Data types
 
-Primary keys
+        Primary keys
 
-Nullability
+        Nullability
 
 This allows Gemini to understand the database structure before generating SQL.
 
-execute_sql()
+        execute_sql()
 
-Executes a read-only SQL SELECT query against the MySQL database and returns the query results to Gemini.
+        Executes a read-only SQL SELECT query against the MySQL database and returns the query results to Gemini.
 
 Only SELECT queries are allowed.
 
@@ -1128,35 +1129,35 @@ Database Tool Calling Flow
 
 For a database-related question, the flow is now:
 
-User
-  ↓
-Gemini
-  ↓
-Determine database information is required
-  ↓
-get_database_schema()
-  ↓
-MCP Server
-  ↓
-MySQL
-  ↓
-Schema returned
-  ↓
-Gemini
-  ↓
-Generate SQL SELECT query
-  ↓
-execute_sql()
-  ↓
-MCP Server
-  ↓
-MySQL
-  ↓
-Query Result
-  ↓
-Gemini
-  ↓
-Final Answer
+**        User
+        ↓
+        Gemini
+        ↓
+        Determine database information is required
+        ↓
+        get_database_schema()
+        ↓
+        MCP Server
+        ↓
+        MySQL
+        ↓
+        Schema returned
+        ↓
+        Gemini
+        ↓
+        Generate SQL SELECT query
+        ↓
+        execute_sql()
+        ↓
+        MCP Server
+        ↓
+        MySQL
+        ↓
+        Query Result
+        ↓
+        Gemini
+        ↓
+        Final Answer**
 
 For example:
 
@@ -1167,17 +1168,19 @@ assigned to them.
 
 Gemini can first request the required table schemas:
 
-get_database_schema(
-    table_names=[
-        "employees",
-        "employee_projects",
-        "projects"
-    ]
-)
+```python
+        get_database_schema(
+            table_names=[
+                "employees",
+                "employee_projects",
+                "projects"
+            ]
+        )
+```
 
 After receiving the schema, Gemini generates the appropriate SQL query and invokes:
 
-execute_sql()
+        execute_sql()
 
 The returned database records are then provided back to Gemini so it can generate the final natural-language response.
 
@@ -1187,38 +1190,39 @@ Separation of Responsibilities
 
 The database integration follows a clear separation between the LLM, MCP client, MCP server, and database.
 
-Gemini
-   │
-   │ Tool Selection
-   ▼
-MCP Client
-   │
-   │ MCP Tool Call
-   ▼
-MCP Server
-   │
-   ▼
-Database Tool
-   │
-   ▼
-MySQL Database
-
+```text
+       Gemini
+        │
+        │ Tool Selection
+        ▼
+        MCP Client
+        │
+        │ MCP Tool Call
+        ▼
+        MCP Server
+        │
+        ▼
+        Database Tool
+        │
+        ▼
+        MySQL Database
+```
 The database connection and schema logic are maintained separately from the MCP tool layer.
 
 Gemini is responsible for:
-
-Understanding the user's request
-        ↓
-Determining when database information is required
-        ↓
-Selecting the database tool
-        ↓
-Generating the SQL query
-        ↓
-Interpreting the query result
-
+```text
+        Understanding the user's request
+                ↓
+        Determining when database information is required
+                ↓
+        Selecting the database tool
+                ↓
+        Generating the SQL query
+                ↓
+        Interpreting the query result**
+```
 The MCP database layer is responsible for:
-
+```text
 Connecting to MySQL
         ↓
 Retrieving database schemas
@@ -1226,7 +1230,7 @@ Retrieving database schemas
 Executing SELECT queries
         ↓
 Returning database results
-
+```
 Prompt Template Integration
 
 The existing SQL prompt-template concept has also been adapted to the MCP architecture.
