@@ -3,7 +3,7 @@ from typing import Optional, List, Dict
 import os
 import re
 from dotenv import load_dotenv
-from tavily import TavilyClient
+from tavily import TavilyClient, AsyncTavilyClient
 from ddgs import DDGS
 
 load_dotenv()

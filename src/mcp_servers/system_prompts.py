@@ -1,4 +1,11 @@
-
+"""
+This module provides system prompts for the AI assistant connected to an MCP server.
+The system prompts include instructions for using the database and web search tools effectively.
+Help the AI assistant understand when to use each tool and how to generate valid SQL queries based on the database schema.
+The system prompts also include guidelines for answering user questions clearly and concisely, without exposing internal tool-calling details unless requested by the user.
+The system prompts are designed to ensure that the AI assistant can provide accurate and relevant information to users while adhering to best practices for tool usage and response generation.
+The system prompts are structured to guide the AI assistant through the process of determining which tools to use.
+"""
 
 # Function to provide system instructions for the AI assistant
 def instructions():
