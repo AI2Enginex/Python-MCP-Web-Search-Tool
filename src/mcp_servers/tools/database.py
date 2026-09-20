@@ -1,6 +1,6 @@
 import os
 from mcp_servers.utils.mysql_connection import DatabaseConnect
-
+import asyncio
 from dotenv import load_dotenv
 
 load_dotenv()  # Load environment variables from .env file
@@ -31,10 +31,9 @@ class DatabaseTool:
         """
         # Initialize the DatabaseConnect instance with the provided connection parameters
         self.db = DatabaseConnect(user=username, password=password, database=database, server=server)
-        self.db.try_connection()
 
     # Method to retrieve the schema of one or more tables
-    def get_schema(self, table_names: list[str]):
+    async def get_schema(self, table_names: list[str]):
 
         """
         Retrieve the schema of one or more MySQL tables.
@@ -56,7 +55,7 @@ class DatabaseTool:
 
         try:
 
-            schema = self.db.get_multiple_table_schemas(
+            schema = await self.db.get_multiple_table_schemas(
                 table_names
             )
 
@@ -65,6 +64,7 @@ class DatabaseTool:
             )
 
             return schema
+
 
         except Exception as e:
 
@@ -75,7 +75,7 @@ class DatabaseTool:
             return f"Database schema error: {e}"
 
     # Method to execute a SQL SELECT query and return results
-    def execute_query(self, query: str):
+    async def execute_query(self, query: str):
 
         """
         Execute a read-only SQL SELECT query.
@@ -96,7 +96,7 @@ class DatabaseTool:
 
         try:
 
-            rows, columns = self.db.execute_select_query(
+            rows, columns = await self.db.execute_select_query(
                 query
             )
 
@@ -120,6 +120,7 @@ class DatabaseTool:
             )
 
             return str(formatted_rows)
+        
 
         except Exception as e:
 
@@ -127,10 +128,28 @@ class DatabaseTool:
                 f"[MCP DATABASE] Query error: {e}"
             )
 
-            return f"Database query error: {e}"
+            return f"Database query error: {e}"  
+        finally:
+            # Close the database connection after executing the query
+            await self.db.close()
 
 if __name__ == "__main__":
     # Example usage
-    db_tool = DatabaseTool()
+    async def main():
 
-    print(db_tool.get_schema(["employees"]))
+        try:
+            db_tool = DatabaseTool()
+
+            result = await db_tool.get_schema(
+                ["employees"]
+            )
+
+            print(result)
+        except Exception as e:
+            print(f"Error: {e}")
+
+        finally:
+            await db_tool.db.close()  # Ensure the database connection is closed
+
+    asyncio.run(main())
+    

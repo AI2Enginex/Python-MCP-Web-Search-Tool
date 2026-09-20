@@ -3,7 +3,7 @@ from typing import Optional, List, Dict
 import os
 import re
 from dotenv import load_dotenv
-from tavily import TavilyClient, AsyncTavilyClient
+from tavily import AsyncTavilyClient
 from ddgs import DDGS
 
 load_dotenv()
@@ -71,8 +71,10 @@ class WebSearchTool:
         text = text.strip()
         
         return text
-        
-    def _tavily_search(self, query: str, num_results: int):
+
+    # Async method to perform a web search using Tavily API (recommended) and filter out unwanted results.
+    # This method retrieves full text content summaries, filters out images and ads, and returns a list of results.
+    async def _tavily_search(self, query: str, num_results: int):
         """
         Search using Tavily API (recommended - most reliable)
         Retrieves full text content summaries, filters out images and ads
@@ -84,8 +86,8 @@ class WebSearchTool:
                 print("Tavily API key not found in TAVILY_API_KEY environment variable")
                 return []
                 
-            client = TavilyClient(api_key=self.tavily_key)
-            response = client.search(
+            client = AsyncTavilyClient(api_key=self.tavily_key)
+            response = await client.search(
                 query, 
                 max_results=num_results,
                 include_answer=True,
@@ -124,65 +126,11 @@ class WebSearchTool:
             
         except Exception as e:
             print(f"Tavily search error: {e}")
-            return []
-    
-    
-    def _duckduckgo_search(self, query: str, num_results: int):
-        """
-        Search using DuckDuckGo (free, no API key needed)
-        Install: pip install ddgs (or pip install duckduckgo-search for older version)
-        Filters out image results and unwanted content
-        """
-        try:
-            ddgs = DDGS()
-            results = list()
-            unwanted_keywords = ['image', 'photo', 'picture', 'gallery', 'pinterest', 'instagram', 'ad', 'advertisement', 'sponsored']
-            
-            try:
-                search_results = list(ddgs.text(query, max_results=num_results*2, timelimit='y'))
-            except Exception as search_error:
-                print(f"DuckDuckGo query error: {search_error}")
-                print(f"Retrying with different parameters...")
-                try:
-                    search_results = list(ddgs.text(query, max_results=num_results*2, backend='lite'))
-                except:
-                    search_results = []
-            
-            if not search_results:
-                print(f"DuckDuckGo returned no results for query")
-                return []
-            
-            for result in search_results:
-                if isinstance(result, dict):
-                    title = result.get('title', '').lower()
-                    url = result.get('href', '') or result.get('link', '')
-                    snippet = result.get('body', '') or result.get('snippet', '')
-                    
-                    if any(keyword in title or keyword in url.lower() for keyword in unwanted_keywords):
-                        continue
-                    
-                    # Clean the snippet aggressively
-                    snippet = self._clean_text(snippet)
-                    
-                    if title and url and snippet and len(snippet.strip()) > 50:
-                        results.append({
-                            'title': result.get('title', ''),
-                            'url': url,
-                            'snippet': snippet
-                        })
-                        if len(results) >= num_results:
-                            break
-            
-            print(f"DuckDuckGo returned {len(results)} text results (filtered)")
-            return results
-            
-        except Exception as e:
-            print(f"DuckDuckGo search error: {e}")
-            import traceback
-            traceback.print_exc()
-            return []
-    
-    def search(self, query: str, num_results: int):
+            return list()
+
+    # Async method to perform a web search using the selected provider (Tavily).
+    # This method retrieves full text content summaries, filters out images and ads, and returns a list of results.
+    async def search(self, query: str, num_results: int):
         """
         Perform web search and return results
         
@@ -197,30 +145,25 @@ class WebSearchTool:
         try:
             # Try with selected provider
             if self.provider == "tavily" and self.tavily_key:
-                results = self._tavily_search(query, num_results)
-                if results:
-                    return results
-            elif self.provider == "google" and self.google_key:
-                results = self._google_search(query, num_results)
+                results = await self._tavily_search(query, num_results)
                 if results:
                     return results
             
-            # Fallback to DuckDuckGo
-            print(f"Primary search failed or returned empty. Trying DuckDuckGo fallback...")
-            results = self._duckduckgo_search(query, num_results)
-            return results if results else []
+            return results if results else list()
             
         except Exception as e:
             print(f"Error in web search ({self.provider}): {e}")
             # Try DuckDuckGo as last resort
             try:
-                print(f"Attempting DuckDuckGo as final fallback...")
-                results = self._duckduckgo_search(query, num_results)
-                return results if results else []
+                print(f"Every Attempt Failed...")
+                return results if results else list()
             except Exception as fallback_e:
                 print(f"All search providers failed: {fallback_e}")
-                return []
-    
+                return list()
+
+    # Method to format search results as a readable string with full content.
+    # Text-only results, cleaned of unwanted markup, images, and hyperlinks.
+    # Helps the LLM provide a more accurate and concise answer to the user's query.
     def format_search_results(self, results: List[Dict[str, str]]):
         """
         Format search results as a readable string with full content

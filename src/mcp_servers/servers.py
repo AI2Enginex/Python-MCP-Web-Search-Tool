@@ -36,7 +36,7 @@ def divide(a: int, b: int): # Function to divide two numbers
     return a / b    
 
 @mcp.tool() # Decorator to register the function as an MCP tool
-def web_search(query: str,num_results: int = 5): # Function to perform a web search using the WebSearchTool
+async def web_search(query: str,num_results: int = 5): # Function to perform a web search using the WebSearchTool
     """
     Search the web for current information.
 
@@ -62,7 +62,7 @@ def web_search(query: str,num_results: int = 5): # Function to perform a web sea
     print(f"[MCP SERVER] num_results = {num_results}")
 
     # Perform the web search using the WebSearchTool
-    results = web_search_tool.search(query=query,num_results=num_results)
+    results = await web_search_tool.search(query=query,num_results=num_results)
 
     # Format the results for better readability
     formatted_results = web_search_tool.format_search_results(results)
@@ -73,7 +73,7 @@ def web_search(query: str,num_results: int = 5): # Function to perform a web sea
     return formatted_results
 
 @mcp.tool() # Decorator to register the function as an MCP tool
-def execute_query(query: str): # Function to execute a SQL query using the DatabaseTool
+async def execute_query(query: str): # Function to execute a SQL query using the DatabaseTool
     """
     Execute a SQL query on the database.
 
@@ -88,7 +88,7 @@ def execute_query(query: str): # Function to execute a SQL query using the Datab
     print(f"[MCP SERVER] execute_query() called")
 
     # Execute the SQL query using the DatabaseTool
-    results = database_tool.execute_query(query=query)
+    results = await database_tool.execute_query(query=query)
 
     print("[MCP SERVER] SQL query execution completed")
 

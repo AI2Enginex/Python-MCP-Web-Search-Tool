@@ -36,10 +36,9 @@ def instructions():
 
         1. Determine which tables are required.
 
-        2. If the schema is unknown, call
-        get_database_schema.
+        2. If the schema is unknown, Inspect the schema first.
 
-        3. Examine the schema returned by the tool.
+        3. Use the schema to understand the table structure and available columns.
 
         4. Generate a valid SQL query based on
         the schema and user's question.

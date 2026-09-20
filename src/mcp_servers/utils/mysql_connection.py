@@ -1,133 +1,161 @@
-import pymysql
+import asyncio
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    create_async_engine,
+)
 
-import sqlalchemy
-import pandas as pd
-
-# Class for connecting to a MySQL database
+# Class to manage asynchronous MySQL database connections and operations
 class DatabaseConnect:
-    
-    # Initialize the class with password and database name
-    def __init__(self, user: str, password: str, database: str, server: str):
+
+    def __init__(
+        self,
+        user: str,
+        password: str,
+        database: str,
+        server: str,
+    ):
+        self.user = user
         self.password = password
         self.database_name = database
         self.server = server
-        self.user = user
-        # Create SQLAlchemy engine and establish a connection
-        self.engine = sqlalchemy.create_engine(
-                f'mysql+pymysql://{self.user}:{self.password}@{self.server}:3306/{self.database_name}')
-        
-    # Method to try establishing a database connection
-    def try_connection(self):
-        try:
-            self.conn = pymysql.connect(
-                host=self.server,
-                user=self.user,
-                password=self.password,
-                db=self.database_name,
+
+        # Async SQLAlchemy engine
+        self.engine: AsyncEngine = create_async_engine(
+            f"mysql+aiomysql://"
+            f"{self.user}:{self.password}"
+            f"@{self.server}:3306/"
+            f"{self.database_name}",
+            pool_pre_ping=True,
+        )
+
+    # Async method to retrieve the data from the entire table, querying all rows and columns.
+    async def read_table(self, table_name: str):
+        """
+        Read an entire table asynchronously.
+
+        Returns:
+            list[dict]: Rows from the table.
+        """
+        # Create a SQL query to select all rows from the specified table
+        query = text(f"SELECT * FROM `{table_name}`")
+
+        async with self.engine.connect() as conn: # Create an asynchronous connection to the database
+
+            result = await conn.execute(query) # Execute the query asynchronously
+
+            rows = result.mappings().all()
+
+            return [dict(row) for row in rows]
+
+    # Async method to retrieve the schema of a specific table, including column names, data types, and constraints.
+    async def get_table_schema(self, table_name: str):
+        """
+        Retrieve schema information for a table.
+        """
+        # Generate a SQL query to get column information from the INFORMATION_SCHEMA.COLUMNS table
+        query = text("""
+            SELECT
+                COLUMN_NAME,
+                DATA_TYPE,
+                IS_NULLABLE,
+                COLUMN_KEY
+            FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA = :database_name
+            AND TABLE_NAME = :table_name
+        """)
+
+        async with self.engine.connect() as conn: # Create an asynchronous connection to the database
+
+            # Execute the query asynchronously with parameters for database and table names
+            result = await conn.execute(
+                query,
+                {
+                    "database_name": self.database_name,
+                    "table_name": table_name,
+                },
             )
 
-            # Return cursor if connection is successful
-            print("Database connection established successfully.")
-            return self.conn.cursor()
-            
-        except:
-            return None
-        
-    # Method to read an entire table into a pandas DataFrame
-    def read_table(self, table_name: str):
-        try:
-            if self.engine is None:
-                raise ValueError("Database connection not established. Call try_connection() first.")
-            print("connection successfull")
-            query = f"SELECT * FROM {table_name};"
-            return pd.read_sql(query, self.engine)
-        except Exception as e:
-            raise e
-    
-    # Method to read a table's schema
-    def get_table_schema(self, table_name: str):
-        try:
-            if self.engine is None:
-                raise ValueError("Database connection not established. Call try_connection() first.")
+            rows = result.mappings().all()
 
-            query = f"""
-            SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE, COLUMN_KEY
-            FROM INFORMATION_SCHEMA.COLUMNS
-            WHERE TABLE_SCHEMA = '{self.database_name}' AND TABLE_NAME = '{table_name}';
-            """
+        if not rows:
+            return (
+                f"Table '{table_name}' "
+                "does not exist or has no columns."
+            )
 
-            df = pd.read_sql(query, self.engine)
+        schema_lines = [
+            f"Table: {table_name}",
+            "Columns:",
+        ]
 
-            if df.empty:
-                return f"Table '{table_name}' does not exist or has no columns."
+        for row in rows:
 
-            # Build a human-readable schema string
-            schema_lines = [f"Table: {table_name}", "Columns:"]
-            for _, row in df.iterrows():
-                col_info = f"- {row['COLUMN_NAME']} ({row['DATA_TYPE']})"
-                if row['COLUMN_KEY'] == 'PRI':
-                    col_info += " [PRIMARY KEY]"
-                if row['IS_NULLABLE'] == 'NO':
-                    col_info += " [NOT NULL]"
-                schema_lines.append(col_info)
+            col_info = (
+                f"- {row['COLUMN_NAME']} "
+                f"({row['DATA_TYPE']})"
+            )
 
-            return "\n".join(schema_lines)
-        except Exception as e:
-            raise e
-    
+            if row["COLUMN_KEY"] == "PRI":
+                col_info += " [PRIMARY KEY]"
 
-    # Method to read Schemas for multiple tables
-    def get_multiple_table_schemas(self, table_names: list):
-        try:
-            all_schemas = list()
-            for table in table_names:
-                schema = self.get_table_schema(table)
-                all_schemas.append(schema)
-            return "\n\n".join(all_schemas)
-        except Exception as e:
-            raise e
+            if row["IS_NULLABLE"] == "NO":
+                col_info += " [NOT NULL]"
 
-    # Method to execute a SELECT query and return results
-    def execute_select_query(self, query: str):
+            schema_lines.append(col_info)
+
+        return "\n".join(schema_lines)
+
+    # Async method to retrieve schemas for multiple tables concurrently.
+    # This method uses asyncio.gather to run multiple get_table_schema calls in parallel.
+    async def get_multiple_table_schemas(
+        self,
+        table_names: list[str],
+    ):
+        """
+        Retrieve schemas for multiple tables concurrently.
+        """
+        tasks = [
+            self.get_table_schema(table)
+            for table in table_names
+        ]
+
+        schemas = await asyncio.gather(*tasks) # Run all schema retrieval tasks concurrently and wait for their completion
+
+        return "\n\n".join(schemas)
+
+    # Async method to execute a SELECT query and return the results.
+    # This method ensures that only SELECT queries are executed, raising an error for any other type of query.
+    async def execute_select_query(self, query: str):
+        """
+        Execute a SELECT query asynchronously.
+
+        Only SELECT queries are allowed.
+        """
 
         query = query.strip()
 
-        # Only allow SELECT queries.
         if not query.lower().startswith("select"):
-
             raise ValueError(
                 "Only SELECT queries are allowed."
             )
 
-        cursor = self.try_connection()
+        async with self.engine.connect() as conn: # Create an asynchronous connection to the database
 
-        if cursor is None:
-
-            raise ConnectionError(
-                "Unable to connect to MySQL database."
+            result = await conn.execute(
+                text(query)
             )
 
-        try:
+            rows = result.fetchall()
 
-            cursor.execute(query)
-
-            rows = cursor.fetchall()
-
-            columns = [
-                description[0]
-                for description in cursor.description
-            ]
+            columns = list(result.keys())
 
             return rows, columns
 
-        finally:
+    # Async method to close the database connection and dispose of the engine.
+    async def close(self):
+        """
+        Dispose of the async database engine.
+        """
 
-            cursor.close()
-
-            if hasattr(self, "conn"):
-
-                self.conn.close()
-
-if __name__ == "__main__":
-   pass
-    
+        await self.engine.dispose()

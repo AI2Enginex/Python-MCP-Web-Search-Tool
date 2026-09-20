@@ -8,6 +8,7 @@ authors = [
 ]
 requires-python = ">=3.12"
 dependencies = [
+    "aiomysql>=0.3.2",
     "ddgs[mcp]>=9.11.4",
     "fastapi[standard]>=0.141.1",
     "fastmcp==2.14.1",

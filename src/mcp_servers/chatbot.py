@@ -409,9 +409,9 @@ async def main(): # Main entry point for the MCP + Gemini Chatbot
             print(f"\nERROR: {e}\n")
 
 
-
-# Run the main function when the script is executed directly. This allows the chatbot to start and handle user 
-# input in an interactive session.
+# Run the application if this script is executed directly. This allows the chatbot to be started from the command line.
+# The asyncio.run() function is used to run the main() coroutine, which manages the chatbot's conversation loop and handles user input.
+# This is the entry point for the MCP + Gemini chatbot application.
 if __name__ == "__main__":
 
     asyncio.run(main())
