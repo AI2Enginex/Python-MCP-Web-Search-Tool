@@ -32,8 +32,35 @@ class DatabaseTool:
         # Initialize the DatabaseConnect instance with the provided connection parameters
         self.db = DatabaseConnect(user=username, password=password, database=database, server=server)
 
+    # Async method to retrieve a list of all tables in the database
+    async def get_tables_(self):
+        """
+        Retrieve a list of all tables in the database.
+
+        Returns:
+            List of table names.
+        """
+        print("\n[MCP DATABASE] get_tables_list() called")
+
+        try:
+            tables = await self.db.get_tables_list()
+
+            print(
+                "[MCP DATABASE] Table list retrieval completed."
+            )
+
+            return tables
+
+        except Exception as e:
+
+            print(
+                f"[MCP DATABASE] Table list error: {e}"
+            )
+
+            return f"Database table list error: {e}"
+
     # Method to retrieve the schema of one or more tables
-    async def get_schema(self, table_names: list[str]):
+    async def get_schema(self, table_names: str):
 
         """
         Retrieve the schema of one or more MySQL tables.
@@ -55,8 +82,8 @@ class DatabaseTool:
 
         try:
 
-            schema = await self.db.get_multiple_table_schemas(
-                table_names
+            schema = await self.db.get_table_schema(
+                table_name=table_names
             )
 
             print(
@@ -129,8 +156,10 @@ class DatabaseTool:
             )
 
             return f"Database query error: {e}"  
+        
         finally:
             # Close the database connection after executing the query
+            print("[MCP DATABASE] Closing database connection.")
             await self.db.close()
 
 if __name__ == "__main__":

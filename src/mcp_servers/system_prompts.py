@@ -38,7 +38,8 @@ def instructions():
 
         2. If the schema is unknown, Inspect the schema first.
 
-        3. Use the schema to understand the table structure and available columns.
+        3. Use get_schema to retrieve the schema to understand the 
+            table structure and available columns.
 
         4. Generate a valid SQL query based on
         the schema and user's question.

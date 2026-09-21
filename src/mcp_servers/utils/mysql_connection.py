@@ -48,6 +48,31 @@ class DatabaseConnect:
 
             return [dict(row) for row in rows]
 
+    # Async method to list all the tables in the database, querying the INFORMATION_SCHEMA.TABLES table.
+    # This helps in dynamically discovering the structure of the database without hardcoding table names.
+    async def get_tables_list(self):
+        """
+        Retrieve a list of all tables in the database.
+
+        Returns:
+            list[str]: List of table names.
+        """
+        query = text(
+            "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES "
+            "WHERE TABLE_SCHEMA = :database_name"
+        )
+
+        async with self.engine.connect() as conn: # Create an asynchronous connection to the database
+
+            result = await conn.execute(
+                query,
+                {"database_name": self.database_name},
+            )
+
+            rows = result.mappings().all()
+
+            return [row["TABLE_NAME"] for row in rows]
+        
     # Async method to retrieve the schema of a specific table, including column names, data types, and constraints.
     async def get_table_schema(self, table_name: str):
         """
@@ -106,23 +131,6 @@ class DatabaseConnect:
 
         return "\n".join(schema_lines)
 
-    # Async method to retrieve schemas for multiple tables concurrently.
-    # This method uses asyncio.gather to run multiple get_table_schema calls in parallel.
-    async def get_multiple_table_schemas(
-        self,
-        table_names: list[str],
-    ):
-        """
-        Retrieve schemas for multiple tables concurrently.
-        """
-        tasks = [
-            self.get_table_schema(table)
-            for table in table_names
-        ]
-
-        schemas = await asyncio.gather(*tasks) # Run all schema retrieval tasks concurrently and wait for their completion
-
-        return "\n\n".join(schemas)
 
     # Async method to execute a SELECT query and return the results.
     # This method ensures that only SELECT queries are executed, raising an error for any other type of query.

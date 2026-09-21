@@ -72,6 +72,62 @@ async def web_search(query: str,num_results: int = 5): # Function to perform a w
     # Return the formatted results
     return formatted_results
 
+
+@mcp.tool() # Decorator to register the function as an MCP tool
+async def list_tables(): # Function to list all tables in the database using the DatabaseTool
+    """
+    List all tables in the database.
+
+    Use this tool when the user asks for:
+    - list of tables
+    - available tables
+    - database structure
+
+    Returns:
+        String containing the list of table names.
+    """
+    tables_ = " "
+    print(f"[MCP SERVER] list_tables() called")
+
+    # Retrieve the list of tables using the DatabaseTool
+    tables = await database_tool.get_tables_()
+    for tables in tables:
+        print(f"[MCP SERVER] Table: {tables}")
+        tables_ += f"{tables}\n"
+        
+    print("[MCP SERVER] Table listing completed")
+
+    # Return the list of table names
+    return tables_
+
+@mcp.tool() # Decorator to register the function as an MCP tool
+async def get_table_schema(table_name: str): # Function to retrieve table schema information from the database using the DatabaseTool
+    """
+    Retrieve table schema information from the database.
+    Parameters:
+        table_name: List of table names to retrieve schema information for.
+        
+    Use this tool when the user asks for:
+    - database schema
+    - table structure
+    - column information
+
+    Returns:
+        Table schema information formatted as text.
+    """
+
+    print(f"[MCP SERVER] get_table_schema() called")
+
+    # Retrieve the table schema using the DatabaseTool
+    schema_info = await database_tool.get_schema(table_names=table_name)
+
+    print("[MCP SERVER] Table schema retrieval completed")
+
+    # Return the schema information
+    return schema_info
+
+
+
 @mcp.tool() # Decorator to register the function as an MCP tool
 async def execute_query(query: str): # Function to execute a SQL query using the DatabaseTool
     """
